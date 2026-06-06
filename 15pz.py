@@ -10,13 +10,11 @@ class IndustryApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Учет промышленных предприятий")
-        self.root.geometry("1100x650")
+        self.root.geometry("1150x650")
         self.root.configure(bg="#f4f4f4")
 
-        # Имя файла базы данных
         self.db_name = "industry.db"
 
-        # Инициализируем базу данных и интерфейс
         self.init_db()
         self.create_widgets()
         self.refresh_table()
@@ -24,12 +22,10 @@ class IndustryApp:
     def init_db(self):
         """Создание таблицы и заполнение 10 начальными позициями (ТЗ)."""
         try:
-            # Если базы нет, она создастся, если есть — просто подключится
             db_is_new = not os.path.exists(self.db_name)
             self.conn = sqlite3.connect(self.db_name)
             self.cursor = self.conn.cursor()
 
-            # Создаем таблицу по структуре из ТЗ
             self.cursor.execute("""
                 CREATE TABLE IF NOT EXISTS enterprises (
                     code INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,7 +40,6 @@ class IndustryApp:
             """)
             self.conn.commit()
 
-            # Если база только что создана, заполняем её 10 позициями
             if db_is_new:
                 sample_data = [
                     (
@@ -147,21 +142,20 @@ class IndustryApp:
                 )
                 self.conn.commit()
         except sqlite3.Error as e:
-            messagebox.showerror(
-                "Ошибка БД", f"Не удалось инициализировать БД: {e}"
-            )
+            print(f"Ошибка БД: {e}")
 
     def create_widgets(self):
         """Создание элементов графического интерфейса."""
-        # --- Левая панель: Ввод и редактирование данных ---
         input_frame = tk.LabelFrame(
-            self.root, text="Данные предприятия", bg="#f4f4f4", font=("Arial", 10, "bold")
+            self.root,
+            text="Данные предприятия",
+            bg="#f4f4f4",
+            font=("Arial", 10, "bold"),
         )
-        input_frame.place(x=15, y=15, width=320, height=360)
+        input_frame.place(x=15, y=15, width=340, height=360)
 
-        # Текстовые метки и поля ввода
         labels = [
-            "Код (только для ред.):",
+            "Код (только ред.):",
             "Наименование:",
             "Физический адрес:",
             "Кол-во филиалов:",
@@ -174,12 +168,11 @@ class IndustryApp:
 
         for i, text in enumerate(labels):
             lbl = tk.Label(input_frame, text=text, bg="#f4f4f4", anchor="w")
-            lbl.grid(row=i, column=0, sticky="ew", padx=10, pady=3)
+            lbl.grid(row=i, column=0, sticky="ew", padx=5, pady=3)
 
             entry = tk.Entry(input_frame)
-            entry.grid(row=i, column=1, sticky="ew", padx=10, pady=3)
+            entry.grid(row=i, column=1, sticky="ew", padx=5, pady=3)
 
-            # Сохраняем ссылки на поля, чтобы брать из них текст
             key = [
                 "code",
                 "name",
@@ -192,12 +185,8 @@ class IndustryApp:
             ][i]
             self.entries[key] = entry
 
-        # Поле кода делаем изначально заблокированным для ручного ввода при добавлении
-        self.entries["code"].configure(
-            bg="#e0e0e0"
-        )  # Код генерируется БД автоматически
+        self.entries["code"].configure(bg="#e0e0e0")
 
-        # Кнопки под полями ввода
         btn_add = tk.Button(
             input_frame,
             text="Добавить новую запись",
@@ -205,18 +194,27 @@ class IndustryApp:
             fg="white",
             command=self.add_record,
         )
-        btn_add.grid(row=8, column=0, columnspan=2, sticky="ew", padx=10, pady=10)
+        btn_add.grid(
+            row=8, column=0, columnspan=2, sticky="ew", padx=5, pady=10
+        )
 
-        # --- Правая панель: Таблица для отображения БД ---
         table_frame = tk.Frame(self.root)
-        table_frame.place(x=350, y=15, width=730, height=360)
+        table_frame.place(x=370, y=15, width=760, height=360)
 
-        columns = ("code", "name", "address", "branches", "staff", "cost", "vol", "date")
+        columns = (
+            "code",
+            "name",
+            "address",
+            "branches",
+            "staff",
+            "cost",
+            "vol",
+            "date",
+        )
         self.tree = ttk.Treeview(
             table_frame, columns=columns, show="headings", selectmode="browse"
         )
 
-        # Заголовки колонок
         self.tree.heading("code", text="Код")
         self.tree.heading("name", text="Название")
         self.tree.heading("address", text="Адрес")
@@ -226,7 +224,6 @@ class IndustryApp:
         self.tree.heading("vol", text="Объем прод.")
         self.tree.heading("date", text="Дата рег.")
 
-        # Ширина колонок
         self.tree.column("code", width=40, anchor="center")
         self.tree.column("name", width=100)
         self.tree.column("address", width=120)
@@ -236,7 +233,6 @@ class IndustryApp:
         self.tree.column("vol", width=90)
         self.tree.column("date", width=80, anchor="center")
 
-        # Прокрутка для таблицы
         scrollbar = ttk.Scrollbar(
             table_frame, orient="vertical", command=self.tree.yview
         )
@@ -244,35 +240,272 @@ class IndustryApp:
         self.tree.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
-        # При клике на строку таблицы данные переносятся в поля ввода
         self.tree.bind("<<TreeviewSelect>>", self.on_tree_select)
-
-        # --- Нижняя панель: Управление (Поиск, Редактирование, Удаление) ---
         control_frame = tk.LabelFrame(
-            self.root, text="Операции (по 3 SQL-запроса на действие)", bg="#f4f4f4", font=("Arial", 10, "bold")
+            self.root,
+            text="Операции (по 3 SQL-запроса на действие)",
+            bg="#f4f4f4",
+            font=("Arial", 10, "bold"),
         )
-        control_frame.place(x=15, y=390, width=1065, height=230)
+        control_frame.place(x=15, y=390, width=1115, height=230)
 
-        # Блок редактирования (3 разных SQL запроса в зависимости от условий)
-        edit_lbl = tk.Label(
+        tk.Label(
             control_frame,
-            text="РЕДАКТИРОВАНИЕ (выберите строку в таблице, измените поля слева):",
+            text="РЕДАКТИРОВАНИЕ:",
             bg="#f4f4f4",
             font=("Arial", 9, "bold"),
-        )
-        edit_lbl.grid(row=0, column=0, columnspan=3, sticky="w", padx=10, pady=(5, 2))
-
+        ).grid(row=0, column=0, columnspan=3, sticky="w", padx=5, pady=2)
         tk.Button(
             control_frame,
-            text="Запрос 1: Обновить ВСЕ поля предприятия",
+            text="1: Обновить ВСЕ поля записи по Коду",
             bg="#2196F3",
             fg="white",
             command=lambda: self.edit_record(1),
-        ).grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+        ).grid(row=1, column=0, padx=5, pady=2, sticky="ew")
         tk.Button(
             control_frame,
-            text="Запрос 2: Сбросить филиалы в 0 (если закрылись)",
+            text="2: Сбросить филиалы в 0 (если объем < 4млн)",
             bg="#2196F3",
             fg="white",
             command=lambda: self.edit_record(2),
-        ).grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+        ).grid(row=1, column=1, padx=5, pady=2, sticky="ew")
+        tk.Button(
+            control_frame,
+            text="3: Увеличить персонал на 10% (обор > 3млн)",
+            bg="#2196F3",
+            fg="white",
+            command=lambda: self.edit_record(3),
+        ).grid(row=1, column=2, padx=5, pady=2, sticky="ew")
+
+        tk.Label(
+            control_frame,
+            text="УДАЛЕНИЕ:",
+            bg="#f4f4f4",
+            font=("Arial", 9, "bold"),
+        ).grid(row=2, column=0, columnspan=3, sticky="w", padx=5, pady=2)
+        tk.Button(
+            control_frame,
+            text="1: Удалить выбранное по Коду",
+            bg="#f44336",
+            fg="white",
+            command=lambda: self.delete_record(1),
+        ).grid(row=3, column=0, padx=5, pady=2, sticky="ew")
+        tk.Button(
+            control_frame,
+            text="2: Удалить где персонал < 5000",
+            bg="#f44336",
+            fg="white",
+            command=lambda: self.delete_record(2),
+        ).grid(row=3, column=1, padx=5, pady=2, sticky="ew")
+        tk.Button(
+            control_frame,
+            text="3: Удалить без филиалов (филиалы=0)",
+            bg="#f44336",
+            fg="white",
+            command=lambda: self.delete_record(3),
+        ).grid(row=3, column=2, padx=5, pady=2, sticky="ew")
+
+        tk.Label(
+            control_frame,
+            text="ПОИСК И ФИЛЬТРАЦИЯ:",
+            bg="#f4f4f4",
+            font=("Arial", 9, "bold"),
+        ).grid(row=4, column=0, columnspan=3, sticky="w", padx=5, pady=2)
+        tk.Button(
+            control_frame,
+            text="1: Объем продукции > 5 000 000",
+            bg="#FF9800",
+            fg="white",
+            command=lambda: self.search_records(1),
+        ).grid(row=5, column=0, padx=5, pady=2, sticky="ew")
+        tk.Button(
+            control_frame,
+            text="2: Поиск по названию (из поля слева)",
+            bg="#FF9800",
+            fg="white",
+            command=lambda: self.search_records(2),
+        ).grid(row=5, column=1, padx=5, pady=2, sticky="ew")
+        tk.Button(
+            control_frame,
+            text="3: Регистрация после 2000 года",
+            bg="#FF9800",
+            fg="white",
+            command=lambda: self.search_records(3),
+        ).grid(row=5, column=2, padx=5, pady=2, sticky="ew")
+
+        tk.Button(
+            control_frame,
+            text="Сбросить фильтры поиска (Показать все предприятия)",
+            bg="#9E9E9E",
+            fg="white",
+            command=self.refresh_table,
+        ).grid(row=6, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
+
+    def refresh_table(self, rows=None):
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        if rows is None:
+            self.cursor.execute("SELECT * FROM enterprises")
+            rows = self.cursor.fetchall()
+        for row in rows:
+            self.tree.insert("", "end", values=row)
+
+    def on_tree_select(self, event):
+        selected = self.tree.selection()
+        if not selected:
+            return
+        values = self.tree.item(selected)["values"]
+        keys = [
+            "code",
+            "name",
+            "address",
+            "branches",
+            "staff",
+            "eq_cost",
+            "volume",
+            "date",
+        ]
+        for i, key in enumerate(keys):
+            self.entries[key].delete(0, tk.END)
+            self.entries[key].insert(0, str(values[i]))
+
+    def clear_entries(self):
+        for entry in self.entries.values():
+            entry.delete(0, tk.END)
+
+    def add_record(self):
+        try:
+            name = self.entries["name"].get().strip()
+            address = self.entries["address"].get().strip()
+            if not name or not address:
+                raise ValueError("Название и адрес не могут быть пустыми!")
+
+            branches = int(self.entries["branches"].get())
+            staff = int(self.entries["staff"].get())
+            eq_cost = float(self.entries["eq_cost"].get())
+            volume = float(self.entries["volume"].get())
+            date_str = self.entries["date"].get().strip()
+            datetime.strptime(date_str, "%Y-%m-%d")
+
+            self.cursor.execute(
+                """
+                INSERT INTO enterprises (name, address, branches, staff, equipment_cost, production_volume, reg_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+                (name, address, branches, staff, eq_cost, volume, date_str),
+            )
+            self.conn.commit()
+            messagebox.showinfo("Успех", "Предприятие успешно добавлено!")
+            self.clear_entries()
+            self.refresh_table()
+        except ValueError as e:
+            messagebox.showerror(
+                "Ошибка ввода", f"Неверный формат данных!\nДетали: {e}"
+            )
+
+    def edit_record(self, query_num):
+        try:
+            if query_num == 1:
+                code = self.entries["code"].get()
+                if not code:
+                    messagebox.showwarning(
+                        "Внимание", "Сначала выберите строку в таблице!"
+                    )
+                    return
+                name = self.entries["name"].get().strip()
+                address = self.entries["address"].get().strip()
+                branches = int(self.entries["branches"].get())
+                staff = int(self.entries["staff"].get())
+                eq_cost = float(self.entries["eq_cost"].get())
+                volume = float(self.entries["volume"].get())
+                date_str = self.entries["date"].get().strip()
+                datetime.strptime(date_str, "%Y-%m-%d")
+
+                self.cursor.execute(
+                    """
+                    UPDATE enterprises 
+                    SET name=?, address=?, branches=?, staff=?, equipment_cost=?, production_volume=?, reg_date=?
+                    WHERE code=?
+                """,
+                    (
+                        name,
+                        address,
+                        branches,
+                        staff,
+                        eq_cost,
+                        volume,
+                        date_str,
+                        int(code),
+                    ),
+                )
+            elif query_num == 2:
+                self.cursor.execute(
+                    "UPDATE enterprises SET branches = 0 WHERE production_volume < 4000000.0"
+                )
+            elif query_num == 3:
+                self.cursor.execute(
+                    "UPDATE enterprises SET staff = CAST(staff * 1.1 AS INTEGER) WHERE equipment_cost > 3000000.0"
+                )
+
+            self.conn.commit()
+            messagebox.showinfo("Успех", f"Запрос №{query_num} выполнен!")
+            self.refresh_table()
+        except ValueError as e:
+            messagebox.showerror("Ошибка", f"Неверные данные: {e}")
+
+    def delete_record(self, query_num):
+        try:
+            if query_num == 1:
+                code = self.entries["code"].get()
+                if not code:
+                    messagebox.showwarning(
+                        "Внимание", "Выберите строку для удаления!"
+                    )
+                    return
+                self.cursor.execute(
+                    "DELETE FROM enterprises WHERE code = ?", (int(code),)
+                )
+            elif query_num == 2:
+                self.cursor.execute("DELETE FROM enterprises WHERE staff < 5000")
+            elif query_num == 3:
+                self.cursor.execute("DELETE FROM enterprises WHERE branches = 0")
+
+            self.conn.commit()
+            self.clear_entries()
+            self.refresh_table()
+            messagebox.showinfo("Успех", "Удаление выполнено!")
+        except Exception as e:
+            messagebox.showerror("Ошибка", str(e))
+
+    def search_records(self, query_num):
+        try:
+            if query_num == 1:
+                self.cursor.execute(
+                    "SELECT * FROM enterprises WHERE production_volume > 5000000.0"
+                )
+            elif query_num == 2:
+                search_name = self.entries["name"].get().strip()
+                if not search_name:
+                    messagebox.showwarning(
+                        "Внимание", "Введите текст в поле 'Наименование'!"
+                    )
+                    return
+                self.cursor.execute(
+                    "SELECT * FROM enterprises WHERE name LIKE ?",
+                    (f"%{search_name}%",),
+                )
+            elif query_num == 3:
+                self.cursor.execute(
+                    "SELECT * FROM enterprises WHERE reg_date >= '2000-01-01'"
+                )
+
+            filtered_rows = self.cursor.fetchall()
+            self.refresh_table(filtered_rows)
+        except Exception as e:
+            messagebox.showerror("Ошибка", str(e))
+
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = IndustryApp(root)
+    root.mainloop()
