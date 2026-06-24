@@ -1,0 +1,38 @@
+from functools import reduce
+import subprocess, sys
+
+# Автоустановка chardet если не установлен
+try:
+    import chardet
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "chardet"])
+    import chardet
+
+# --- Константы ---
+INPUT_FILE  = "text18-10.txt"
+OUTPUT_FILE = "text18-10-result.txt"
+AUTHOR_LINE = "— М. Ю. Лермонтов, «Бородино»"
+
+# --- Чистые функции ---
+read_file   = lambda path: open(path, encoding=__import__("chardet").detect(open(path,"rb").read())["encoding"]).read()
+write_file  = lambda path, text: open(path, "w", encoding="utf-8").write(text)
+
+count_upper = lambda text: reduce(lambda acc, ch: acc + (1 if ch.isupper() else 0), text, 0)
+
+add_author  = lambda text, author: text.rstrip("\n") + "\n" + author + "\n"
+
+print_result = lambda text, upper: (
+    print("========== СОДЕРЖИМОЕ ФАЙЛА =========="),
+    print(text),
+    print(f"Букв в верхнем регистре: {upper}"),
+)
+
+# --- Точка входа ---
+if __name__ == "__main__":
+    text        = read_file(INPUT_FILE)
+    upper_count = count_upper(text)
+    new_text    = add_author(text, AUTHOR_LINE)
+
+    print_result(text, upper_count)
+    write_file(OUTPUT_FILE, new_text)
+    print(f"\nНовый файл сохранён: {OUTPUT_FILE}")
