@@ -1,0 +1,41 @@
+#10.1 - Средствами языка Python сформировать текстовый файл (.txt), содержащий
+#последовательность из целых положительных и отрицательных чисел. Сформировать
+#новый текстовый файл (.txt) следующего вида, предварительно выполнив требуемую
+#обработку элементов:
+#Исходные данные:
+#Количество элементов:
+#Элементы в обратном порядке:
+#Сумма элементов последней половины:
+
+# 1. Создаем исходный файл с числами (Вариант 10)
+initial_numbers = "-10 15 20 -5 30 -40 50 60"
+with open("data_10_1.txt", "w", encoding="utf-8") as f1:
+    f1.write(initial_numbers)
+
+# 2. Читаем числа и переводим их в список целых чисел
+with open("data_10_1.txt", "r", encoding="utf-8") as f1:
+    content = f1.read().split()
+
+numbers = [int(x) for x in content]
+
+# 3. Выполняем обработку по ТЗ Варианта 10
+count_elements = len(numbers)  # Количество элементов
+reversed_elements = " ".join(
+    [str(x) for x in reversed(numbers)]
+)  # В обратном порядке
+
+# Находим сумму элементов последней половины
+half_index = len(numbers) // 2
+second_half_sum = sum(numbers[half_index:])
+
+# 4. Записываем результат в новый файл
+with open("data_10_2.txt", "w", encoding="utf-8") as f2:
+    f2.write(f"Исходные данные: {initial_numbers}\n")
+    f2.write(f"Количество элементов: {count_elements}\n")
+    f2.write(f"Элементы в обратном порядке: {reversed_elements}\n")
+    f2.write(f"Сумма элементов последней половины: {second_half_sum}\n")
+
+# Выводим в консоль для проверки в Colab
+print("--- Задача 1 выполнена. Содержимое нового файла: ---")
+with open("data_10_2.txt", "r", encoding="utf-8") as f2:
+    print(f2.read())
